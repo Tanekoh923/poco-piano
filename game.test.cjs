@@ -1,6 +1,9 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const songbook = require('./songbook.js');
+const html = fs.readFileSync(__dirname+'/index.html','utf8');
+const songIds = [...html.matchAll(/data-song="([^"]+)"/g)].map(match=>match[1]);
 
 // Deterministic clock and input events exercise the real game without waiting for songs.
 function setup(storage = {}) {
@@ -18,7 +21,7 @@ function setup(storage = {}) {
     getBoundingClientRect() { return {width:360,height:400}; }
   }
   const get=(id)=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id);};
-  const songButtons=['twinkle','joy','morning'].map(song=>{const el=new Element();el.dataset.song=song;return el;});
+  const songButtons=songIds.map(song=>{const el=new Element();el.dataset.song=song;return el;});
   const levels=['easy','normal','hard'].map(level=>{const el=new Element();el.dataset.level=level;return el;});
   const domKeys=[0,2,4,5,7,9,11,12,1,3,6,8,10].map(lane=>{const el=new Element();el.dataset.lane=lane;el.closest=()=>el;return el;});
   const keys=[...domKeys].sort((a,b)=>a.dataset.lane-b.dataset.lane);
@@ -30,6 +33,7 @@ function setup(storage = {}) {
   document.querySelectorAll=(selector)=>selector==='.key'?domKeys:selector==='[data-song]'?songButtons:levels;
   let pointerTarget=null;document.elementFromPoint=()=>pointerTarget;
   const window = new Element();
+  window.PocoSongbook= songbook;
   const frequencies=[];
   window.AudioContext=class {
     constructor(){this.state='running';this.currentTime=0;this.destination={};}
@@ -111,5 +115,37 @@ function setup(storage = {}) {
   assert.equal(wrong.get('score').textContent,'000000','adjacent white key does not score a black-key note');
   await wrong.hit(1);assert.equal(wrong.get('score').textContent,'001010','correct black key scores');
   const old=setup({'poco-bests-v1':JSON.stringify({'twinkle:easy':999999})});assert.equal(old.get('best').textContent,'—','four-key records are separate');
-  console.log('PASS: timing, full combo, records, pause/reset, 13 pitches, all chromatic notes, black-key accuracy, keyboard/touch overlap, sliding and cancellation');
+  assert.equal(songIds.length,13,'ten additional songs are available');
+  assert.deepEqual(songIds,Object.keys(songbook.songs),'every song is reachable from the UI');
+  assert.ok(html.indexOf('src="songbook.js')<html.indexOf('src="game.js'),'catalog loads before the game');
+  assert.deepEqual(songbook.parseMelody('C:0.5 R:2 F#:1.5'),[
+    {beat:0,duration:.5,midi:60},{beat:.5,duration:2,midi:null},{beat:2.5,duration:1.5,midi:66}
+  ],'rests advance the timeline without a pitch');
+  for(const bad of ['X','C:0','C:-1','D:NaN','R:Infinity','C:1:2',''])assert.throws(()=>songbook.parseMelody(bad));
+  const frog=songbook.parseMelody(songbook.songs.frog.melody);
+  assert.equal(frog.length,36);assert.equal(frog.filter(n=>n.midi!==null).length,29);
+  assert.equal(frog.reduce((sum,n)=>sum+n.duration,0),32,'frog includes seven silent beats');
+  for(const id of ['bee','jacques'])assert.ok(songbook.parseMelody(songbook.songs[id].melody).some(n=>[61,63,66,68,70].includes(n.midi)),'black-key arrangements contain accidentals');
+  // Exercise every chart at every difficulty through actual taps, including gaps and subdivisions.
+  for(const [id,song] of Object.entries(songbook.songs)){
+    const events=songbook.parseMelody(song.melody),sounding=events.filter(n=>n.midi!==null);
+    assert.ok(sounding.length>=20,`${id} has a playable melody`);
+    assert.ok(sounding.every(n=>Number.isInteger(n.midi)&&n.midi>=60&&n.midi<=72),`${id} fits all thirteen keys`);
+    for(const [index,speed] of [.83,1,1.25].entries()){
+      const game=setup();await game.songButtons[songIds.indexOf(id)].emit('click');await game.levels[index].emit('click');
+      assert.equal(game.get('current-song').textContent,song.title);
+      await game.click(index===0?'library-start':'start');
+      let expectedScore=0,count=0;
+      for(const note of sounding){game.frame(3800+note.beat*60000/(song.bpm*speed));await game.hit(note.midi-60);count++;expectedScore+=1000+Math.min(count,50)*10;}
+      const beats=events.reduce((sum,n)=>sum+n.duration,0);
+      game.frame(3000+(1.6+beats*60/(song.bpm*speed))*1000+1);
+      assert.match(game.get('overlay-inner').innerHTML,/FULL COMBO/,`${id}/${index} has no missed notes or rests`);
+      assert.match(game.get('overlay-inner').innerHTML,/正確さ 100%/);
+      assert.equal(Number(game.get('score').textContent),expectedScore);
+      const level=['easy','normal','hard'][index];
+      assert.equal(JSON.parse(game.storage['poco-bests-v2'])[`${id}:${level}`],expectedScore,'each song/difficulty saves independently');
+      assert.equal(game.songButtons[songIds.indexOf(id)].duration.textContent,`約 ${Math.ceil(1.6+beats*60/(song.bpm*speed))} 秒`,'duration includes rests and difficulty speed');
+    }
+  }
+  console.log('PASS: 13 songs × 3 difficulties, rests, subdivisions, durations, full combos, per-song records, pause/reset and thirteen-key input');
 })().catch(err=>{console.error(err);process.exitCode=1;});

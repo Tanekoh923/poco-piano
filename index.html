@@ -7,8 +7,9 @@
   <meta name="description" content="ドレミファソラシドと黒鍵でメロディを奏でる、スマホで遊べるピアノリズムゲーム。">
   <title>poco — 音を、あそぼう。</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23171b18'/%3E%3Ctext x='15' y='46' font-family='Georgia' font-size='48' fill='%23eea16f'%3Ep%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=2">
-  <script src="game.js?v=2" defer></script>
+  <link rel="stylesheet" href="style.css?v=3">
+  <script src="songbook.js?v=3" defer></script>
+  <script src="game.js?v=3" defer></script>
 </head>
 <body>
   <div class="app">
@@ -24,14 +25,26 @@
           <h1>音を、<br><span>あそぼう。</span></h1>
           <p>指先から、ちいさな音楽を。<br>流れる音符に合わせて、鍵盤をタップ。</p>
         </div>
-        <div class="library-heading"><h2>今日の一曲</h2><span>01 — 03</span></div>
-        <div class="songs" id="songs">
+        <div class="library-heading"><h2>今日の一曲</h2><span>全13曲</span></div>
+        <div class="songs" id="songs" role="group" aria-label="全13曲の曲一覧" tabindex="0">
           <button class="song selected" data-song="twinkle" aria-pressed="true"><span class="song-art stars" aria-hidden="true">✦</span><span class="song-info"><strong>きらきら星</strong><small>Twinkle, Twinkle, Little Star</small></span><span class="song-tail"><small>約 35 秒</small><span class="select-mark">↗</span></span></button>
           <button class="song" data-song="joy" aria-pressed="false"><span class="song-art circles" aria-hidden="true">◒</span><span class="song-info"><strong>歓喜の歌</strong><small>Ode to Joy · Beethoven</small></span><span class="song-tail"><small>約 30 秒</small><span class="select-mark">↗</span></span></button>
           <button class="song" data-song="morning" aria-pressed="false"><span class="song-art sun" aria-hidden="true">☼</span><span class="song-info"><strong>朝のさんぽ</strong><small>Morning Walk · 黒鍵も使うオリジナル曲</small></span><span class="song-tail"><small>黒鍵あり</small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="frog" aria-pressed="false"><span class="song-art stars" aria-hidden="true">♧</span><span class="song-info"><strong>かえるの合唱</strong><small>童謡 · ドイツ民謡</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="lamb" aria-pressed="false"><span class="song-art circles" aria-hidden="true">☁</span><span class="song-info"><strong>メリーさんのひつじ</strong><small>童謡 · アメリカの歌</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="butterfly" aria-pressed="false"><span class="song-art sun" aria-hidden="true">❧</span><span class="song-info"><strong>ちょうちょう</strong><small>童謡 · ドイツ民謡</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="bee" aria-pressed="false"><span class="song-art stars" aria-hidden="true">✺</span><span class="song-info"><strong>ぶんぶんぶん</strong><small>童謡 · 黒鍵あり</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="london" aria-pressed="false"><span class="song-art circles" aria-hidden="true">⌒</span><span class="song-info"><strong>ロンドン橋</strong><small>童謡 · イギリス民謡</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="jacques" aria-pressed="false"><span class="song-art sun" aria-hidden="true">♬</span><span class="song-info"><strong>フレール・ジャック</strong><small>輪唱 · 黒鍵あり</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="saints" aria-pressed="false"><span class="song-art stars" aria-hidden="true">♫</span><span class="song-info"><strong>聖者の行進</strong><small>トラディショナル · テーマ</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="snail" aria-pressed="false"><span class="song-art circles" aria-hidden="true">◎</span><span class="song-info"><strong>かたつむり</strong><small>童謡 · 文部省唱歌</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="hands" aria-pressed="false"><span class="song-art sun" aria-hidden="true">✳</span><span class="song-info"><strong>むすんでひらいて</strong><small>手遊び歌 · Rousseau</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
+          <button class="song" data-song="jingle" aria-pressed="false"><span class="song-art stars" aria-hidden="true">✧</span><span class="song-info"><strong>ジングルベル</strong><small>季節の歌 · サビ</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
         </div>
+        <p class="songs-hint">上下にスクロールして、次の一曲を。</p>
         <div class="difficulty-row"><span>難易度</span><div class="segmented" aria-label="難易度"><button data-level="easy" class="active" aria-pressed="true">ゆったり</button><button data-level="normal" aria-pressed="false">ふつう</button><button data-level="hard" aria-pressed="false">はやめ</button></div></div>
         <div class="best-row"><span>YOUR PERSONAL BEST</span><strong id="best">—</strong></div>
+        <button class="primary-button library-play" id="library-start">この曲を弾く <span>↗</span></button>
         <div class="library-foot"><span>♪</span><p>うまく弾くより、楽しむこと。<br>ひとつの音から、はじめよう。</p></div>
       </section>
       <section class="instrument" aria-label="ピアノゲーム">

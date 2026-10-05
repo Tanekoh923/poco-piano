@@ -12,12 +12,7 @@
     {label:'ラ♯',position:6,binding:'u',black:true}, {label:'シ',position:6.5,binding:'j'},
     {label:'ド↑',position:7.5,binding:'k'}
   ];
-  const pitches = { C:60,'C#':61,D:62,'D#':63,E:64,F:65,'F#':66,G:67,'G#':68,A:69,'A#':70,B:71,c:72 };
-  const songs = {
-    twinkle:{title:'きらきら星',bpm:100,melody:'C C G G A A G:2 F F E E D D C:2 G G F F E E D:2 G G F F E E D:2 C C G G A A G:2 F F E E D D C:2'},
-    joy:{title:'歓喜の歌',bpm:110,melody:'E E F G G F E D C C D E E:1.5 D:0.5 D:2 E E F G G F E D C C D E D:1.5 C:0.5 C:2'},
-    morning:{title:'朝のさんぽ',bpm:108,melody:'C C# D D# E F F# G G# A A# B c:2 B A# A G# G F# F E D# D C#:2 C:2 E F# G G# A G F# E D C:3'}
-  };
+  const {songs,parseMelody} = window.PocoSongbook;
   const levels = {easy:{speed:.83,travel:2.7,window:.25},normal:{speed:1,travel:2.2,window:.19},hard:{speed:1.25,travel:1.65,window:.14}};
   let selected='twinkle', level='easy', state='idle', notes=[], duration=0;
   let score=0,combo=0,maxCombo=0,judged=0,quality=0,misses=0;
@@ -28,7 +23,7 @@
   try { best=JSON.parse(localStorage.getItem('poco-bests-v2')||'{}')||{}; } catch {}
   const bestKey=()=>`${selected}:${level}`;
   function updateBest(){ $('best').textContent=best[bestKey()]?Number(best[bestKey()]).toLocaleString():'—'; }
-  function updateDurations(){document.querySelectorAll('[data-song]').forEach(button=>{const song=songs[button.dataset.song];const beats=song.melody.split(' ').reduce((sum,n)=>sum+Number(n.split(':')[1]||1),0);button.querySelector('.song-tail small').textContent=`約 ${Math.ceil(1.6+beats*60/(song.bpm*levels[level].speed))} 秒`;});}
+  function updateDurations(){document.querySelectorAll('[data-song]').forEach(button=>{const song=songs[button.dataset.song];const beats=parseMelody(song.melody).reduce((sum,event)=>sum+event.duration,0);button.querySelector('.song-tail small').textContent=`約 ${Math.ceil(1.6+beats*60/(song.bpm*levels[level].speed))} 秒`;});}
   function resize(){const r=canvas.getBoundingClientRect();width=r.width;height=r.height;const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);}
   new ResizeObserver(resize).observe(canvas);
   function initAudio(){
@@ -45,9 +40,9 @@
     setTimeout(()=>envelope.disconnect(),1600);
   }
   function chart(){
-    let beat=0;const seconds=60/(songs[selected].bpm*levels[level].speed);
-    notes=songs[selected].melody.split(' ').map((token,index)=>{const [pitch,length]=token.split(':');const midi=pitches[pitch];const lane=midi-60;const n={at:.8+beat*seconds,lane,midi,label:keyDefinitions[lane].label,done:false,index};beat+=Number(length||1);return n;});
-    duration=.8+beat*seconds+.8;
+    const events=parseMelody(songs[selected].melody),seconds=60/(songs[selected].bpm*levels[level].speed);
+    notes=events.filter(event=>event.midi!==null).map(({beat,midi},index)=>{const lane=midi-60;return {at:.8+beat*seconds,lane,midi,label:keyDefinitions[lane].label,done:false,index};});
+    duration=1.6+events.reduce((sum,event)=>sum+event.duration,0)*seconds;
   }
   function hud(){
     $('score').textContent=String(score).padStart(6,'0');
@@ -176,6 +171,6 @@
   function backgroundPause(){clearInput();pause();}
   document.addEventListener('visibilitychange',()=>{if(document.hidden)backgroundPause();});window.addEventListener('blur',backgroundPause);
   $('sound').addEventListener('click',()=>{sound=!sound;if(master)master.gain.value=sound?.65:0;$('sound-icon').textContent=sound?'♫':'♩';document.querySelector('.sound-label').textContent=sound?'SOUND ON':'SOUND OFF';$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('aria-label',sound?'音をオフにする':'音をオンにする');});
-  $('pause').addEventListener('click',()=>state==='paused'?resume():pause());$('reset').addEventListener('click',idle);$('start').addEventListener('click',start);
+  $('pause').addEventListener('click',()=>state==='paused'?resume():pause());$('reset').addEventListener('click',idle);$('start').addEventListener('click',start);$('library-start').addEventListener('click',start);
   updateBest();updateDurations();resize();requestAnimationFrame(frame);
 })();

@@ -10,7 +10,7 @@ http.createServer((req,res) => {
   try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); } catch { res.writeHead(400);res.end('Bad request');return; }
   const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
   if (!file.startsWith(root + path.sep)) { res.writeHead(403);res.end('Forbidden');return; }
-  if (!['index.html','style.css','game.js'].includes(path.relative(root,file))) { res.writeHead(404);res.end('Not found');return; }
+  if (!['index.html','style.css','songbook.js','game.js'].includes(path.relative(root,file))) { res.writeHead(404);res.end('Not found');return; }
   fs.readFile(file,(err,data) => {
     if(err){res.writeHead(404);res.end('Not found');return;}
     res.writeHead(200,{'Content-Type':types[path.extname(file)],'Cache-Control':'no-cache'});res.end(data);
