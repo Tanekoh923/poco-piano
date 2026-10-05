@@ -1,0 +1,7 @@
+{
+  "name": "poco-piano",
+  "version": "1.0.0",
+  "private": true,
+  "description": "スマホで遊べる4レーンのピアノリズムゲーム",
+  "scripts": { "start": "node server.cjs", "check": "node --check game.js && node --check server.cjs", "test": "node game.test.cjs" }
+}
