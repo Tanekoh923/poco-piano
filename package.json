@@ -1,7 +1,7 @@
 {
   "name": "poco-piano",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "スマホで遊べる4レーンのピアノリズムゲーム",
+  "description": "白鍵8つ・黒鍵5つで遊べるスマホ向けピアノリズムゲーム",
   "scripts": { "start": "node server.cjs", "check": "node --check game.js && node --check server.cjs", "test": "node game.test.cjs" }
 }
