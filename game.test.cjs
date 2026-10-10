@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const songbook = require('./songbook.js');
+const composition = require('./composition.js');
 const html = fs.readFileSync(__dirname+'/index.html','utf8');
 const songIds = [...html.matchAll(/data-song="([^"]+)"/g)].map(match=>match[1]);
 
@@ -10,12 +11,15 @@ function setup(storage = {}) {
   let clock = 0, animation;
   const elements = new Map();
   class Element {
-    constructor(id) { this.id=id;this.textContent='';this.style={};this.dataset={};this.listeners={};this.attributes={};this.disabled=false;this.hidden=false;this.tagName='BUTTON';this.classes=new Set();this.classList={add:(x)=>this.classes.add(x),remove:(x)=>this.classes.delete(x),toggle:(x,v)=>v?this.classes.add(x):this.classes.delete(x)}; }
+    constructor(id) { this.id=id;this.textContent='';this.value='';this.children=[];this.style={};this.dataset={};this.listeners={};this.attributes={};this.disabled=false;this.hidden=false;this.tagName='BUTTON';this.classes=new Set();this.classList={add:(x)=>this.classes.add(x),remove:(x)=>this.classes.delete(x),toggle:(x,v)=>v?this.classes.add(x):this.classes.delete(x)}; }
     addEventListener(name,fn) { (this.listeners[name] ||= []).push(fn); }
     async emit(name,props={}) { for(const fn of this.listeners[name]||[])await fn({target:this,preventDefault(){},...props}); }
     setAttribute(name,value) { this.attributes[name]=value; }
     setPointerCapture() {}
-    querySelector() { return this.duration ||= new Element(); }
+    querySelector(selector) { if(selector==='.song-tail small')return this.duration ||= new Element();return (this.parts ||= {})[selector] ||= new Element(); }
+    append(...children){this.children.push(...children);}
+    replaceChildren(...children){this.children=children;}
+    scrollIntoView(){}
     set innerHTML(value) { this.html=value;for(const match of value.matchAll(/id="([^"]+)"/g))elements.set(match[1],new Element(match[1])); }
     get innerHTML() { return this.html||''; }
     getBoundingClientRect() { return {width:360,height:400}; }
@@ -30,14 +34,17 @@ function setup(storage = {}) {
   get('notes').getContext=()=>drawing;
   const document = new Element();document.body=new Element();document.getElementById=get;
   document.querySelector=()=>get('sound-label');
-  document.querySelectorAll=(selector)=>selector==='.key'?domKeys:selector==='[data-song]'?songButtons:levels;
+  document.querySelectorAll=(selector)=>selector==='.key'?domKeys:selector==='[data-song]'?[...songButtons,...get('my-songs').children]:selector==='[data-level]'?levels:[];
+  document.createElement=tag=>{const element=new Element();element.tagName=tag.toUpperCase();return element;};
   let pointerTarget=null;document.elementFromPoint=()=>pointerTarget;
   const window = new Element();
   window.PocoSongbook= songbook;
+  window.PocoComposition=composition;
+  get('compose-title').value='わたしの曲';get('compose-bpm').value='100';get('compose-length').value='1';
   const frequencies=[];
   window.AudioContext=class {
     constructor(){this.state='running';this.currentTime=0;this.destination={};}
-    createGain(){return {gain:{value:0,setValueAtTime:noOp,linearRampToValueAtTime:noOp,exponentialRampToValueAtTime:noOp},connect:noOp,disconnect:noOp};}
+    createGain(){return {gain:{value:0,setValueAtTime:noOp,cancelScheduledValues:noOp,linearRampToValueAtTime:noOp,exponentialRampToValueAtTime:noOp},connect:noOp,disconnect:noOp};}
     createOscillator(){return {frequency:{set value(v){frequencies.push(v);}},connect:noOp,disconnect:noOp,start:noOp,stop:noOp};}
     resume(){return Promise.resolve();}
   };
@@ -147,5 +154,46 @@ function setup(storage = {}) {
       assert.equal(game.songButtons[songIds.indexOf(id)].duration.textContent,`約 ${Math.ceil(1.6+beats*60/(song.bpm*speed))} 秒`,'duration includes rests and difficulty speed');
     }
   }
-  console.log('PASS: 13 songs × 3 difficulties, rests, subdivisions, durations, full combos, per-song records, pause/reset and thirteen-key input');
+  const maker=setup();await maker.click('compose-open');
+  assert.equal(maker.get('composer').hidden,false);assert.equal(maker.get('compose-save').disabled,true);
+  maker.get('compose-title').value='<b>わたしの曲</b>';maker.get('compose-bpm').value='120';
+  await maker.hit(0);maker.get('compose-length').value='.5';await maker.hit(3);await maker.click('compose-rest');
+  maker.get('compose-length').value='2';await maker.hit(12);
+  assert.equal(maker.get('compose-summary').textContent,'3音 · 4拍');
+  await maker.get('compose-notes').children[0].emit('click');maker.get('compose-length').value='2';await maker.get('compose-length').emit('change');
+  await maker.hit(1);await maker.click('compose-append');assert.equal(maker.get('compose-summary').textContent,'3音 · 5拍');
+  await maker.click('compose-preview');maker.frame(100);
+  assert.match(maker.get('compose-preview').textContent,/止める/);await maker.click('compose-preview');
+  assert.equal(maker.get('compose-preview').textContent,'▶ 試聴');
+  await maker.click('compose-save');
+  const custom=JSON.parse(maker.storage[composition.storageKey])[0];assert.equal(custom.melody,'C#:2 D#:0.5 R:0.5 c:2');
+  assert.equal(maker.get('current-song').textContent,custom.title);assert.equal(maker.get('composer').hidden,true);
+  let noteCount=0;for(const note of songbook.parseMelody(custom.melody).filter(n=>n.midi!==null)){maker.frame(3900+note.beat*60000/(120*.83));await maker.hit(note.midi-60);noteCount++;}
+  maker.frame(3100+1600+5*60000/(120*.83)+1);assert.match(maker.get('overlay-inner').innerHTML,/FULL COMBO/);
+  assert.equal(noteCount,3);await maker.click('back');await maker.click('compose-edit-current');
+  maker.get('compose-title').value='名前だけ変更';await maker.click('compose-save');
+  assert.ok(JSON.parse(maker.storage['poco-bests-v2'])[`${custom.id}:easy`],'renaming keeps the best score');
+  await maker.click('reset');await maker.click('compose-edit-current');await maker.hit(7);await maker.click('compose-save');
+  assert.equal(JSON.parse(maker.storage['poco-bests-v2'])[`${custom.id}:easy`],undefined,'melody edits clear obsolete scores');
+  const reload=setup(maker.storage);assert.equal(reload.get('my-songs').children.length,1);await reload.get('my-songs').children[0].emit('click');
+  assert.equal(reload.get('current-song').textContent,'名前だけ変更');await reload.click('compose-edit-current');
+  await reload.click('compose-delete');assert.equal(reload.get('compose-delete-confirm').hidden,false);
+  await reload.click('compose-delete-no');assert.equal(reload.get('compose-delete-confirm').hidden,true);
+  await reload.click('compose-delete');await reload.click('compose-delete-yes');assert.deepEqual(JSON.parse(reload.storage[composition.storageKey]),[]);
+  assert.equal(reload.get('current-song').textContent,'きらきら星');
+  const recorder=setup();await recorder.click('compose-open');recorder.get('compose-bpm').value='120';
+  await recorder.click('compose-record');recorder.frame(1000);await recorder.hit(0);recorder.frame(1500);await recorder.hit(3);
+  recorder.frame(1750);await recorder.click('compose-rest');recorder.frame(2000);await recorder.hit(12);recorder.frame(2500);await recorder.click('compose-record');
+  assert.equal(recorder.get('compose-summary').textContent,'3音 · 3拍');await recorder.click('compose-save');
+  assert.equal(JSON.parse(recorder.storage[composition.storageKey])[0].melody,'C:1 D#:0.5 R:0.5 c:1');
+  const broken=setup({[composition.storageKey]:'invalid json'});assert.equal(broken.get('storage-notice').hidden,false);
+  await broken.click('compose-open');await broken.hit(0);broken.get('compose-bpm').value='300';await broken.click('compose-save');
+  assert.match(broken.get('compose-message').textContent,/40〜200/);assert.equal(broken.get('composer').hidden,false);
+  const denied=setup(new Proxy({},{set(){const error=new Error('disabled');error.name='SecurityError';throw error;}}));
+  await denied.click('compose-open');await denied.hit(0);await denied.click('compose-save');
+  assert.match(denied.get('compose-message').textContent,/保存が許可/);assert.equal(denied.get('composer').hidden,false);assert.equal(denied.get('compose-notes').children.length,1,'failed save keeps the draft');
+  await recorder.click('reset');await recorder.click('compose-edit-current');await recorder.click('compose-record');
+  assert.equal(recorder.get('compose-delete').disabled,true);recorder.document.hidden=true;await recorder.document.emit('visibilitychange');
+  assert.equal(recorder.get('compose-record').textContent,'● リズム録音','backgrounding ends recording');
+  console.log('PASS: 13 songs × 3 difficulties, custom song create/edit/play/reload/delete, recording, preview, validation and per-song records');
 })().catch(err=>{console.error(err);process.exitCode=1;});

@@ -7,9 +7,10 @@
   <meta name="description" content="ドレミファソラシドと黒鍵でメロディを奏でる、スマホで遊べるピアノリズムゲーム。">
   <title>poco — 音を、あそぼう。</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23171b18'/%3E%3Ctext x='15' y='46' font-family='Georgia' font-size='48' fill='%23eea16f'%3Ep%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=3">
-  <script src="songbook.js?v=3" defer></script>
-  <script src="game.js?v=3" defer></script>
+  <link rel="stylesheet" href="style.css?v=4">
+  <script src="songbook.js?v=4" defer></script>
+  <script src="composition.js?v=4" defer></script>
+  <script src="game.js?v=4" defer></script>
 </head>
 <body>
   <div class="app">
@@ -42,12 +43,28 @@
           <button class="song" data-song="jingle" aria-pressed="false"><span class="song-art stars" aria-hidden="true">✧</span><span class="song-info"><strong>ジングルベル</strong><small>季節の歌 · サビ</small></span><span class="song-tail"><small></small><span class="select-mark">↗</span></span></button>
         </div>
         <p class="songs-hint">上下にスクロールして、次の一曲を。</p>
+        <div class="my-songs" id="my-songs-section" hidden><div class="library-heading"><h2>わたしの曲</h2><span id="my-songs-count"></span></div><div id="my-songs" class="songs" role="group" aria-label="保存した自分の曲"></div><button id="compose-edit-current" class="text-button" hidden>選んだ曲を編集</button></div>
+        <button class="compose-open" id="compose-open"><span>＋</span> メロディをつくる <span>↗</span></button>
+        <p class="composer-storage-note" id="storage-notice" hidden></p>
         <div class="difficulty-row"><span>難易度</span><div class="segmented" aria-label="難易度"><button data-level="easy" class="active" aria-pressed="true">ゆったり</button><button data-level="normal" aria-pressed="false">ふつう</button><button data-level="hard" aria-pressed="false">はやめ</button></div></div>
         <div class="best-row"><span>YOUR PERSONAL BEST</span><strong id="best">—</strong></div>
         <button class="primary-button library-play" id="library-start">この曲を弾く <span>↗</span></button>
         <div class="library-foot"><span>♪</span><p>うまく弾くより、楽しむこと。<br>ひとつの音から、はじめよう。</p></div>
       </section>
       <section class="instrument" aria-label="ピアノゲーム">
+        <section class="composer" id="composer" aria-label="作曲" hidden>
+          <div class="composer-heading"><div><span class="eyebrow">YOUR LITTLE MELODY</span><h2>音を、つくろう。</h2></div><button id="compose-close" class="text-button">曲選択へ</button></div>
+          <div class="compose-fields"><label>曲名<input id="compose-title" maxlength="40" value="わたしの曲" autocomplete="off"></label><label class="tempo-field">テンポ<input id="compose-bpm" type="number" inputmode="numeric" min="40" max="200" step="1" value="100"></label></div>
+          <p class="composer-help">下の鍵盤で入力。音符を選ぶと、音や長さを変えられます。</p>
+          <div class="compose-edit-row"><label>長さ<select id="compose-length"><option value="0.5">½拍</option><option value="1" selected>1拍</option><option value="2">2拍</option><option value="4">4拍</option></select></label><button id="compose-rest" class="compose-button">休符</button><button id="compose-undo" class="compose-button" disabled>1音もどす</button><button id="compose-append" class="compose-button" disabled>末尾に追加</button></div>
+          <div class="compose-notes" id="compose-notes" role="group" aria-label="作曲中の音符"></div>
+          <div class="compose-summary"><span id="compose-summary">0音 · 0拍</span><span id="compose-edit-hint">鍵盤をタップしてはじめよう</span></div>
+          <div class="compose-actions"><button id="compose-record" class="compose-button">● リズム録音</button><button id="compose-preview" class="compose-button" disabled>▶ 試聴</button><button id="compose-save" class="compose-button save-button" disabled>保存して遊ぶ ↗</button></div>
+          <p class="record-help">録音はタップの間隔を½拍単位で記録します。同時に押した音は1音になります。</p>
+          <p id="compose-message" class="compose-message" role="status" aria-live="polite"></p>
+          <div class="compose-bottom"><small>最大256拍・20曲。この端末のブラウザに保存されます。</small><button id="compose-delete" class="text-button" hidden>保存曲を削除</button></div>
+          <div id="compose-delete-confirm" class="delete-confirm" hidden><span>この保存曲を削除しますか？</span><button id="compose-delete-yes" class="compose-button">削除する</button><button id="compose-delete-no" class="compose-button">やめる</button></div>
+        </section>
         <div class="instrument-head"><div><span class="eyebrow">NOW PLAYING</span><h2 id="current-song">きらきら星</h2></div><button class="icon-button pause-button" id="pause" aria-label="一時停止" disabled>Ⅱ</button></div>
         <div class="stats"><div><span>SCORE</span><strong id="score">000000</strong></div><div class="combo-stat"><span>COMBO</span><strong id="combo">0<span> ×</span></strong></div><div class="accuracy-stat"><span>ACCURACY</span><strong id="accuracy">—</strong></div></div>
         <div class="progress-track"><div id="progress"></div></div>
